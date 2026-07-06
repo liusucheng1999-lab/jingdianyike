@@ -663,11 +663,11 @@ COLS.forEach(col=>{
   const stickyCls = col.sticky===1?'col-s1':col.sticky===2?'col-s2':'';
   th.className = [stickyCls, col.type==='action'?'col-action':(col.sortable?'':'no-sort')].filter(Boolean).join(' ');
   const hint = col.desc ? `<span class="info-hint" data-tip="${col.desc}">ⓘ</span>` : '';
-  th.innerHTML = col.label + hint + (col.sortable ? '<span class="arrow"></span>' : '');
+  th.innerHTML = col.label + hint + (col.sortable ? '<span class="arrow">⇅</span>' : '');
   if(col.sortable){
     th.addEventListener('click', ()=>{
       if(sortKey===col.key){ sortDir = sortDir==='asc'?'desc':'asc'; } else { sortKey=col.key; sortDir='asc'; }
-      document.querySelectorAll('#headRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='';});
+      document.querySelectorAll('#headRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='⇅';});
       th.classList.add('active'); th.querySelector('.arrow').textContent = sortDir==='asc'?'▲':'▼';
       render();
     });
@@ -930,10 +930,10 @@ LISTEN_COLS.forEach(col=>{
   th.dataset.key = col.key;
   th.className = col.sticky===1?'col-s1':col.sticky===2?'col-s2':'';
   const hint = col.desc ? `<span class="info-hint" data-tip="${col.desc}">ⓘ</span>` : '';
-  th.innerHTML = col.label + hint + '<span class="arrow"></span>';
+  th.innerHTML = col.label + hint + '<span class="arrow">⇅</span>';
   th.addEventListener('click', ()=>{
     if(listenSortKey===col.key){ listenSortDir = listenSortDir==='asc'?'desc':'asc'; } else { listenSortKey=col.key; listenSortDir='asc'; }
-    document.querySelectorAll('#listenHeadRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='';});
+    document.querySelectorAll('#listenHeadRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='⇅';});
     th.classList.add('active'); th.querySelector('.arrow').textContent = listenSortDir==='asc'?'▲':'▼';
     renderListen();
   });
@@ -1142,11 +1142,11 @@ CW_COLS.forEach(col=>{
   const stickyCls = col.sticky===1?'col-s1':col.sticky===2?'col-s2':'';
   th.className = [stickyCls, col.sortable?'':'no-sort'].filter(Boolean).join(' ');
   const hint = col.desc ? `<span class="info-hint" data-tip="${col.desc}">ⓘ</span>` : '';
-  th.innerHTML = col.label + hint + (col.sortable ? '<span class="arrow"></span>' : '');
+  th.innerHTML = col.label + hint + (col.sortable ? '<span class="arrow">⇅</span>' : '');
   if(col.sortable){
     th.addEventListener('click', ()=>{
       if(cwSortKey===col.key){ cwSortDir = cwSortDir==='asc'?'desc':'asc'; } else { cwSortKey=col.key; cwSortDir='asc'; }
-      document.querySelectorAll('#cwHeadRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='';});
+      document.querySelectorAll('#cwHeadRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='⇅';});
       th.classList.add('active'); th.querySelector('.arrow').textContent = cwSortDir==='asc'?'▲':'▼';
       renderCw();
     });
