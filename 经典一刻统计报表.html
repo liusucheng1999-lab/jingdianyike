@@ -73,12 +73,14 @@
   .filter-field .range-inputs{ display:flex; align-items:center; gap:6px; }
   .filter-field .range-inputs input{ flex:1; min-width:0; }
   .filter-field .range-sep{ color:var(--text-faint); font-size:11px; flex:0 0 auto; }
-  .filter-actions{ display:flex; justify-content:flex-end; margin-top:14px; }
+  .filter-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
   .filter-actions button{
-    padding:7px 16px; border:1px solid var(--border); background:transparent; color:var(--text-soft);
+    padding:7px 18px; border:1px solid var(--border); background:transparent; color:var(--text-soft);
     border-radius:5px; font-family:inherit; font-size:12.5px; cursor:pointer; transition:.15s;
   }
   .filter-actions button:hover{ background:var(--bg); color:var(--text); border-color:var(--text-soft); }
+  .filter-actions button.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .filter-actions button.primary:hover{ background:var(--accent); color:#fff; opacity:.9; }
 
   /* ---------- table ---------- */
   .table-scroll{
@@ -98,6 +100,8 @@
   thead th:hover{ background:#2a2e37; }
   thead th.col-action{ cursor:default; }
   thead th.col-action:hover{ background:var(--head-bg); }
+  thead th.no-sort{ cursor:default; }
+  thead th.no-sort:hover{ background:var(--head-bg); }
   thead th .arrow{ display:inline-block; width:10px; margin-left:2px; opacity:.55; font-size:10px; }
   thead th .info-hint{ position:relative; display:inline-block; margin-left:4px; opacity:.6; font-size:11px; cursor:help; }
   thead th .info-hint:hover{ opacity:1; color:#ffd479; }
@@ -165,6 +169,23 @@
   .page-nav button:hover:not(:disabled){ border-color:var(--accent); color:var(--accent); }
   .page-nav button:disabled{ opacity:.35; cursor:not-allowed; }
   .page-nav span{ padding:0 10px; font-family:'IBM Plex Mono',monospace; color:var(--text); }
+
+  /* ---------- modal ---------- */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(26,29,35,.45); display:none; align-items:center; justify-content:center; z-index:200; }
+  .modal-overlay.open{ display:flex; }
+  .modal-card{ background:#fff; border-radius:10px; padding:26px 28px; width:400px; max-width:90vw; box-shadow:0 20px 60px rgba(0,0,0,.25); animation:modalIn .18s ease; }
+  @keyframes modalIn{ from{opacity:0; transform:translateY(8px) scale(.98);} to{opacity:1; transform:translateY(0) scale(1);} }
+  .modal-card h3{ margin:0 0 6px; font-size:16px; }
+  .modal-sub{ margin:0 0 18px; font-size:12.5px; color:var(--text-faint); }
+  .modal-sub b{ color:var(--text); font-weight:600; }
+  .modal-note{ background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:20px; }
+  .modal-note .note-label{ font-size:11px; color:var(--text-faint); letter-spacing:.05em; margin-bottom:8px; }
+  .modal-note ul{ margin:0; padding-left:18px; }
+  .modal-note li{ font-size:13px; color:var(--text-soft); line-height:1.6; }
+  .modal-note li + li{ margin-top:6px; }
+  .modal-actions{ display:flex; justify-content:flex-end; }
+  .modal-actions button{ padding:8px 18px; border-radius:6px; font-family:inherit; font-size:12.5px; cursor:pointer; background:var(--accent); border:1px solid var(--accent); color:#fff; transition:.15s; }
+  .modal-actions button:hover{ opacity:.9; }
 
   /* ---------- sidebar ---------- */
   html, body{ height:100%; }
@@ -287,7 +308,7 @@
         </div>
       </div>
     </div>
-    <div class="filter-actions"><button id="resetBtn">重置筛选</button></div>
+    <div class="filter-actions"><button class="primary" id="queryBtn">查询</button><button id="resetBtn">重置筛选</button></div>
   </div>
 
   <div class="table-scroll">
@@ -359,7 +380,7 @@
         </div>
       </div>
     </div>
-    <div class="filter-actions"><button id="listenResetBtn">重置筛选</button></div>
+    <div class="filter-actions"><button class="primary" id="listenQueryBtn">查询</button><button id="listenResetBtn">重置筛选</button></div>
   </div>
 
   <div class="table-scroll">
@@ -431,7 +452,7 @@
         </div>
       </div>
     </div>
-    <div class="filter-actions"><button id="cwResetBtn">重置筛选</button></div>
+    <div class="filter-actions"><button class="primary" id="cwQueryBtn">查询</button><button id="cwResetBtn">重置筛选</button></div>
   </div>
 
   <div class="table-scroll">
@@ -462,6 +483,21 @@
 </div>
 
 </div>
+</div>
+
+<div class="modal-overlay" id="nameModal">
+  <div class="modal-card">
+    <h3>学员运营档案</h3>
+    <p class="modal-sub" id="nameModalSub"></p>
+    <div class="modal-note">
+      <div class="note-label">开发说明</div>
+      <ul>
+        <li>点击打开学员运营档案，携带运营记录，课程参数为经典一刻</li>
+        <li>支持进行运营标签的标记，也是标记到经典一刻课程上</li>
+      </ul>
+    </div>
+    <div class="modal-actions"><button id="nameModalClose">知道了</button></div>
+  </div>
 </div>
 
 <script>
@@ -599,13 +635,13 @@ const COLS = [
   {key:'currentLessons', label:'当前开课数', type:'num', desc:'实际已开课的正课课数'},
   {key:'dueLessons', label:'应听课课节', type:'num', desc:'学员激活后（兑换码的激活时间/课程下单时间）到会员结束那天期间开课的课数'},
   {key:'listenCount', label:'听课节数', type:'num', desc:'学员总听课节数'},
-  {key:'dueListenRate', label:'应听课率(%)', type:'num', desc:'听课节数/应听课节数'},
+  {key:'dueListenRate', label:'应听课率(%)', type:'num', desc:'听课节数/应听课节数', sortable:true},
   {key:'totalListenRate', label:'总听课率(%)', type:'num', desc:'听课节数/当前开课数'},
   {key:'homeworkCount', label:'作业次数', type:'num', desc:'学员总作业次数'},
-  {key:'dueHomeworkRate', label:'应作业率(%)', type:'num', desc:'作业次数/应听课节数'},
+  {key:'dueHomeworkRate', label:'应作业率(%)', type:'num', desc:'作业次数/应听课节数', sortable:true},
   {key:'totalHomeworkRate', label:'总作业率(%)', type:'num', desc:'作业次数/当前开课数'},
   {key:'completeCount', label:'完课节数', type:'num', desc:'听课进度>=80%的听课节数'},
-  {key:'dueCompleteRate', label:'应完课率(%)', type:'num', desc:'完课节数/应听课节数'},
+  {key:'dueCompleteRate', label:'应完课率(%)', type:'num', desc:'完课节数/应听课节数', sortable:true},
   {key:'totalCompleteRate', label:'总完课率(%)', type:'num', desc:'完课节数/开课课节数'},
   {key:'avgProgress', label:'平均听课进度', type:'num', desc:'各课节听课进度/听课节数'},
   {key:'lastListenTime', label:'最近听课时间', type:'str', cls:'mono'},
@@ -625,10 +661,10 @@ COLS.forEach(col=>{
   const th = document.createElement('th');
   th.dataset.key = col.key;
   const stickyCls = col.sticky===1?'col-s1':col.sticky===2?'col-s2':'';
-  th.className = [stickyCls, col.type==='action'?'col-action':''].filter(Boolean).join(' ');
+  th.className = [stickyCls, col.type==='action'?'col-action':(col.sortable?'':'no-sort')].filter(Boolean).join(' ');
   const hint = col.desc ? `<span class="info-hint" data-tip="${col.desc}">ⓘ</span>` : '';
-  th.innerHTML = col.label + hint + (col.type==='action' ? '' : '<span class="arrow"></span>');
-  if(col.type!=='action'){
+  th.innerHTML = col.label + hint + (col.sortable ? '<span class="arrow"></span>' : '');
+  if(col.sortable){
     th.addEventListener('click', ()=>{
       if(sortKey===col.key){ sortDir = sortDir==='asc'?'desc':'asc'; } else { sortKey=col.key; sortDir='asc'; }
       document.querySelectorAll('#headRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='';});
@@ -665,9 +701,9 @@ const F = {
 fillSelect(F.province, Array.from(new Set(locations.map(l=>l[0]))).sort((a,b)=>a.localeCompare(b,'zh')));
 fillSelect(F.city, Array.from(new Set(locations.map(l=>l[1]))).sort((a,b)=>a.localeCompare(b,'zh')));
 
+document.getElementById('queryBtn').addEventListener('click', ()=>{ page=1; render(); });
 Object.values(F).forEach(el=>{
-  const evt = el.tagName==='SELECT' ? 'change' : 'input';
-  el.addEventListener(evt, ()=>{ page=1; render(); });
+  el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('queryBtn').click(); });
 });
 
 document.getElementById('resetBtn').addEventListener('click', ()=>{
@@ -809,13 +845,24 @@ els.body.addEventListener('click', (e)=>{
   render();
 });
 
-/* ---------------- name -> 学员运营档案 ---------------- */
+/* ---------------- name -> 学员运营档案（弹框，仅展示开发说明文案，不做真实跳转） ---------------- */
+const nameModal = document.getElementById('nameModal');
+const nameModalSub = document.getElementById('nameModalSub');
+
+function openNameModal(row){
+  nameModalSub.innerHTML = `<b>${row.name}</b>（学员ID ${row.studentId}）`;
+  nameModal.classList.add('open');
+}
+function closeNameModal(){ nameModal.classList.remove('open'); }
+
 els.body.addEventListener('click', (e)=>{
   const link = e.target.closest('.name-link');
   if(!link) return;
-  const url = `student-profile.html?studentId=${link.dataset.id}&course=${encodeURIComponent('经典一刻')}`;
-  window.open(url, '_blank');
+  const row = DATA.find(r=>r.studentId===parseInt(link.dataset.id,10));
+  if(row) openNameModal(row);
 });
+document.getElementById('nameModalClose').addEventListener('click', closeNameModal);
+nameModal.addEventListener('click', (e)=>{ if(e.target===nameModal) closeNameModal(); });
 
 render();
 
@@ -896,6 +943,12 @@ LISTEN_COLS.forEach(col=>{
 let listenSortKey = 'startTime', listenSortDir = 'desc';
 let listenPage = 1;
 
+/* 默认按开课日期倒序排列 */
+(()=>{
+  const th = document.querySelector(`#listenHeadRow th[data-key="${listenSortKey}"]`);
+  if(th){ th.classList.add('active'); th.querySelector('.arrow').textContent = listenSortDir==='asc'?'▲':'▼'; }
+})();
+
 const FL = {
   lessonName: document.getElementById('filterLessonName'),
   startFrom: document.getElementById('filterStartFrom'),
@@ -914,9 +967,9 @@ const FL = {
   progressMax: document.getElementById('filterProgressMax'),
 };
 
+document.getElementById('listenQueryBtn').addEventListener('click', ()=>{ listenPage=1; renderListen(); });
 Object.values(FL).forEach(el=>{
-  const evt = el.tagName==='SELECT' ? 'change' : 'input';
-  el.addEventListener(evt, ()=>{ listenPage=1; renderListen(); });
+  el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('listenQueryBtn').click(); });
 });
 
 document.getElementById('listenResetBtn').addEventListener('click', ()=>{
@@ -1072,13 +1125,13 @@ const CW_COLS = [
   {key:'startDate', label:'开课日期', type:'str', cls:'mono'},
   {key:'eligibleCount', label:'应听课人数', type:'num', desc:'开课当天有权限的人数'},
   {key:'listenCount', label:'听课人数', type:'num', desc:'开课当天有权限的人，听课的人数'},
-  {key:'listenRate', label:'应听课率(%)', type:'num', desc:'听课人数/开课当天有权限的人数'},
+  {key:'listenRate', label:'应听课率(%)', type:'num', desc:'听课人数/开课当天有权限的人数', sortable:true},
   {key:'makeupCount', label:'补课人数', type:'num', desc:'开课当天没有权限的人，听课的人数'},
   {key:'makeupRate', label:'补课率(%)', type:'num', desc:'补课人数/当前是会员，且开课当天没权限的人数'},
   {key:'homeworkCount', label:'作业次数', type:'num', desc:'实际作业人数'},
-  {key:'homeworkRate', label:'应作业率(%)', type:'num', desc:'实际作业人数/开课当天有权限的人数'},
+  {key:'homeworkRate', label:'应作业率(%)', type:'num', desc:'实际作业人数/开课当天有权限的人数', sortable:true},
   {key:'completeCount', label:'完课节数', type:'num', desc:'实际完课人数'},
-  {key:'completeRate', label:'应完课率(%)', type:'num', desc:'实际完课人数/开课当天有权限的人数'},
+  {key:'completeRate', label:'应完课率(%)', type:'num', desc:'实际完课人数/开课当天有权限的人数', sortable:true},
   {key:'avgProgress', label:'平均听课进度', type:'num'},
 ];
 
@@ -1086,19 +1139,23 @@ const cwHeadRow = document.getElementById('cwHeadRow');
 CW_COLS.forEach(col=>{
   const th = document.createElement('th');
   th.dataset.key = col.key;
-  th.className = col.sticky===1?'col-s1':col.sticky===2?'col-s2':'';
+  const stickyCls = col.sticky===1?'col-s1':col.sticky===2?'col-s2':'';
+  th.className = [stickyCls, col.sortable?'':'no-sort'].filter(Boolean).join(' ');
   const hint = col.desc ? `<span class="info-hint" data-tip="${col.desc}">ⓘ</span>` : '';
-  th.innerHTML = col.label + hint + '<span class="arrow"></span>';
-  th.addEventListener('click', ()=>{
-    if(cwSortKey===col.key){ cwSortDir = cwSortDir==='asc'?'desc':'asc'; } else { cwSortKey=col.key; cwSortDir='asc'; }
-    document.querySelectorAll('#cwHeadRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='';});
-    th.classList.add('active'); th.querySelector('.arrow').textContent = cwSortDir==='asc'?'▲':'▼';
-    renderCw();
-  });
+  th.innerHTML = col.label + hint + (col.sortable ? '<span class="arrow"></span>' : '');
+  if(col.sortable){
+    th.addEventListener('click', ()=>{
+      if(cwSortKey===col.key){ cwSortDir = cwSortDir==='asc'?'desc':'asc'; } else { cwSortKey=col.key; cwSortDir='asc'; }
+      document.querySelectorAll('#cwHeadRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='';});
+      th.classList.add('active'); th.querySelector('.arrow').textContent = cwSortDir==='asc'?'▲':'▼';
+      renderCw();
+    });
+  }
   cwHeadRow.appendChild(th);
 });
 
-let cwSortKey = 'startDate', cwSortDir = 'asc';
+/* 默认（固定）按开课日期倒序排列；开课日期表头本身不可点击排序 */
+let cwSortKey = 'startDate', cwSortDir = 'desc';
 let cwPage = 1;
 
 const FCw = {
@@ -1117,9 +1174,9 @@ const FCw = {
   progressMax: document.getElementById('filterCwProgressMax'),
 };
 
+document.getElementById('cwQueryBtn').addEventListener('click', ()=>{ cwPage=1; renderCw(); });
 Object.values(FCw).forEach(el=>{
-  const evt = el.tagName==='SELECT' ? 'change' : 'input';
-  el.addEventListener(evt, ()=>{ cwPage=1; renderCw(); });
+  el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('cwQueryBtn').click(); });
 });
 
 document.getElementById('cwResetBtn').addEventListener('click', ()=>{
