@@ -9,4 +9,4 @@ jobs:
     steps:
       - name: 触发同步
         run: |
-          curl -s -X POST "https://aimakerbox.com/api/sync-app?app_id=（发布后获取）"
+          curl -s -X POST "https://aimakerbox.com/api/sync-app?app_id=951296c0-142c-4bca-aa02-96982af5d1c5"
