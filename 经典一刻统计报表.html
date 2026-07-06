@@ -633,7 +633,7 @@ const COLS = [
   {key:'className', label:'班级名称', type:'str'},
   {key:'teacherName', label:'班主任', type:'str'},
   {key:'currentLessons', label:'当前开课数', type:'num', desc:'实际已开课的正课课数'},
-  {key:'dueLessons', label:'应听课课节', type:'num', desc:'学员激活后（兑换码的激活时间/课程下单时间）到会员结束那天期间开课的课数'},
+  {key:'dueLessons', label:'应听课课节', type:'num', desc:'学员有权限当天（如果买的是兑换码，有权限时间为兑换码激活时间／如果买的是课程，为下单时间）到会员结束那天期间开课的课数'},
   {key:'listenCount', label:'听课节数', type:'num', desc:'学员总听课节数'},
   {key:'dueListenRate', label:'应听课率(%)', type:'num', desc:'听课节数/应听课节数', sortable:true},
   {key:'totalListenRate', label:'总听课率(%)', type:'num', desc:'听课节数/当前开课数'},
