@@ -263,13 +263,14 @@
   <button class="tab-btn active" data-target="tab-students">学员数据统计</button>
   <button class="tab-btn" data-target="tab-listen">学员听课明细</button>
   <button class="tab-btn" data-target="tab-courseware">课件学情</button>
+  <button class="tab-btn" data-target="tab-class">班级维度</button>
 </div>
 
 <!-- ================= TAB 1: 学员数据统计 ================= -->
 <div class="tab-panel active" id="tab-students">
 
   <div class="panel-bar">
-    <p class="panel-meta">共 <b id="totalCount">0</b> 条学员记录 · <span id="classCount">0</span> 个班级</p>
+    <p class="panel-meta">共 <b id="totalCount">0</b> 条学员记录 · <span id="classCount">0</span> 个班级<span id="classIdFilterNote"></span></p>
     <button id="exportBtn">导出</button>
   </div>
 
@@ -482,12 +483,73 @@
 
 </div>
 
+<!-- ================= TAB 4: 班级维度 ================= -->
+<div class="tab-panel" id="tab-class">
+
+  <div class="panel-bar">
+    <p class="panel-meta">共 <b id="clsTotalCount">0</b> 条班级记录</p>
+    <button id="clsExportBtn">导出</button>
+  </div>
+
+  <div class="filter-panel">
+    <div class="filter-grid">
+      <div class="filter-field"><label>班级名称</label><input type="text" id="filterClsClassName" placeholder="模糊搜索班级名称"></div>
+      <div class="filter-field"><label>班级号</label><input type="text" id="filterClsClassNo" placeholder="模糊搜索班级号"></div>
+      <div class="filter-field"><label>班主任姓名</label><input type="text" id="filterClsTeacherName" placeholder="模糊搜索班主任姓名"></div>
+      <div class="filter-field"><label>班主任省份</label><select id="filterClsProvince"><option value="">全部</option></select></div>
+      <div class="filter-field"><label>班主任城市</label><select id="filterClsCity"><option value="">全部</option></select></div>
+      <div class="filter-field"><label>应听课率(%)</label>
+        <div class="range-inputs">
+          <input type="number" id="filterClsListenRateMin" placeholder="最小" min="0"><span class="range-sep">-</span><input type="number" id="filterClsListenRateMax" placeholder="最大" min="0">
+        </div>
+      </div>
+      <div class="filter-field"><label>应完课率(%)</label>
+        <div class="range-inputs">
+          <input type="number" id="filterClsCompleteRateMin" placeholder="最小" min="0"><span class="range-sep">-</span><input type="number" id="filterClsCompleteRateMax" placeholder="最大" min="0">
+        </div>
+      </div>
+      <div class="filter-field"><label>应作业率(%)</label>
+        <div class="range-inputs">
+          <input type="number" id="filterClsHomeworkRateMin" placeholder="最小" min="0"><span class="range-sep">-</span><input type="number" id="filterClsHomeworkRateMax" placeholder="最大" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="filter-actions"><button class="primary" id="clsQueryBtn">查询</button><button id="clsResetBtn">重置筛选</button></div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr id="clsHeadRow"></tr></thead>
+      <tbody id="clsTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <div>每页
+      <select id="clsPageSize">
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+      </select>
+      条 &nbsp;·&nbsp; 第 <span id="clsRangeStart" class="mono">0</span>–<span id="clsRangeEnd" class="mono">0</span> 条，共 <span id="clsFilteredTotal" class="mono">0</span> 条（筛选后）
+    </div>
+    <div class="page-nav">
+      <button id="clsFirstPage">«</button>
+      <button id="clsPrevPage">‹</button>
+      <span id="clsPageIndicator">1 / 1</span>
+      <button id="clsNextPage">›</button>
+      <button id="clsLastPage">»</button>
+    </div>
+  </div>
+
+</div>
+
 </div>
 </div>
 
 <div class="modal-overlay" id="nameModal">
   <div class="modal-card">
-    <h3>学员运营档案</h3>
+    <h3 id="nameModalTitle">学员运营档案</h3>
     <p class="modal-sub" id="nameModalSub"></p>
     <div class="modal-note">
       <div class="note-label">开发说明</div>
@@ -554,12 +616,15 @@ function randName(){ return randChoice(surnames) + randChoice(givenChars) + (Mat
 
 const CLASSES = [];
 for(let i=1;i<=50;i++){
+  const teacherLoc = randChoice(locations);
   CLASSES.push({
     id: 1012000000+i,
     no: 6010000+i,
     name: classThemes[i%classThemes.length] + String(i).padStart(2,'0') + '班',
     teacherId: randInt(1500000,1999999),
-    teacherName: randName()
+    teacherName: randName(),
+    teacherProvince: teacherLoc[0],
+    teacherCity: teacherLoc[1]
   });
 }
 
@@ -677,6 +742,7 @@ COLS.forEach(col=>{
 
 let sortKey = 'studentId', sortDir = 'asc';
 let page = 1;
+let activeClassIdFilter = null;
 
 const F = {
   classNo: document.getElementById('filterClassNo'),
@@ -708,8 +774,21 @@ Object.values(F).forEach(el=>{
 
 document.getElementById('resetBtn').addEventListener('click', ()=>{
   Object.values(F).forEach(el=>{ el.value=''; });
+  activeClassIdFilter = null;
   page=1; render();
 });
+
+document.querySelector('.panel-meta').addEventListener('click', (e)=>{
+  if(e.target.id==='clearClassIdFilter'){ activeClassIdFilter = null; page=1; render(); }
+});
+
+function goToStudentsByClassId(classId){
+  Object.values(F).forEach(el=>{ el.value=''; });
+  activeClassIdFilter = classId;
+  page = 1;
+  render();
+  document.querySelector('.tab-btn[data-target="tab-students"]').click();
+}
 
 function getFiltered(){
   const vClassNo = F.classNo.value.trim();
@@ -726,6 +805,7 @@ function getFiltered(){
   const vDueCompleteMin = numOrNull(F.dueCompleteRateMin), vDueCompleteMax = numOrNull(F.dueCompleteRateMax);
 
   return DATA.filter(r=>{
+    if(activeClassIdFilter!==null && r.classId!==activeClassIdFilter) return false;
     if(vClassNo && !String(r.classNo).includes(vClassNo)) return false;
     if(vClassName && !r.className.toLowerCase().includes(vClassName)) return false;
     if(vId && !String(r.studentId).includes(vId)) return false;
@@ -803,6 +883,9 @@ function render(){
 
   document.getElementById('totalCount').textContent = TOTAL.toLocaleString();
   document.getElementById('classCount').textContent = CLASSES.length;
+  document.getElementById('classIdFilterNote').innerHTML = activeClassIdFilter!==null
+    ? ` · 已按班级ID <b class="mono">${activeClassIdFilter}</b> 筛选 <a href="javascript:void(0)" id="clearClassIdFilter" style="color:var(--accent);text-decoration:underline;">清除</a>`
+    : '';
   els.filteredTotal.textContent = filtered.length.toLocaleString();
   els.rangeStart.textContent = filtered.length? (startIdx+1).toLocaleString() : 0;
   els.rangeEnd.textContent = Math.min(startIdx+size, filtered.length).toLocaleString();
@@ -849,8 +932,9 @@ els.body.addEventListener('click', (e)=>{
 const nameModal = document.getElementById('nameModal');
 const nameModalSub = document.getElementById('nameModalSub');
 
-function openNameModal(row){
-  nameModalSub.innerHTML = `<b>${row.name}</b>（学员ID ${row.studentId}）`;
+function openNameModal(title, subHtml){
+  document.getElementById('nameModalTitle').textContent = title;
+  nameModalSub.innerHTML = subHtml;
   nameModal.classList.add('open');
 }
 function closeNameModal(){ nameModal.classList.remove('open'); }
@@ -859,7 +943,7 @@ els.body.addEventListener('click', (e)=>{
   const link = e.target.closest('.name-link');
   if(!link) return;
   const row = DATA.find(r=>r.studentId===parseInt(link.dataset.id,10));
-  if(row) openNameModal(row);
+  if(row) openNameModal('学员运营档案', `<b>${row.name}</b>（学员ID ${row.studentId}）`);
 });
 document.getElementById('nameModalClose').addEventListener('click', closeNameModal);
 nameModal.addEventListener('click', (e)=>{ if(e.target===nameModal) closeNameModal(); });
@@ -1285,6 +1369,208 @@ document.getElementById('cwExportBtn').addEventListener('click', ()=>{
 });
 
 renderCw();
+
+/* ================= 班级维度 (per-class rollup of 学员数据) ================= */
+const CLASS_DATA = CLASSES.map(cls=>{
+  const rows = DATA.filter(r=>r.classId===cls.id);
+  const studentCount = rows.length;
+  const avg = key => studentCount ? rows.reduce((s,r)=>s+parseFloat(r[key]),0)/studentCount : 0;
+  return {
+    classId: cls.id,
+    classNo: cls.no,
+    className: cls.name,
+    teacherId: cls.teacherId,
+    teacherName: cls.teacherName,
+    teacherProvince: cls.teacherProvince,
+    teacherCity: cls.teacherCity,
+    studentCount: studentCount,
+    avgListenRate: avg('dueListenRate').toFixed(2),
+    avgCompleteRate: avg('dueCompleteRate').toFixed(2),
+    avgHomeworkRate: avg('dueHomeworkRate').toFixed(2),
+  };
+});
+
+const CLASS_COLS = [
+  {key:'className', label:'班级名称', type:'str', sticky:1, strong:true},
+  {key:'classId', label:'班级ID', type:'num', cls:'mono'},
+  {key:'classNo', label:'班级号', type:'num', cls:'mono'},
+  {key:'teacherName', label:'班主任名称', type:'str'},
+  {key:'teacherId', label:'班主任ID', type:'num', cls:'mono'},
+  {key:'teacherProvince', label:'班主任省份', type:'str'},
+  {key:'teacherCity', label:'班主任城市', type:'str'},
+  {key:'studentCount', label:'班级人数', type:'num'},
+  {key:'avgListenRate', label:'应听课率(%)', type:'num', desc:'学员的平均应听课率', sortable:true},
+  {key:'avgCompleteRate', label:'应完课率(%)', type:'num', desc:'学员的平均应完课率', sortable:true},
+  {key:'avgHomeworkRate', label:'应作业率(%)', type:'num', desc:'学员的平均应作业率', sortable:true},
+];
+
+const clsHeadRow = document.getElementById('clsHeadRow');
+CLASS_COLS.forEach(col=>{
+  const th = document.createElement('th');
+  th.dataset.key = col.key;
+  const stickyCls = col.sticky===1?'col-s1':col.sticky===2?'col-s2':'';
+  th.className = [stickyCls, col.sortable?'':'no-sort'].filter(Boolean).join(' ');
+  const hint = col.desc ? `<span class="info-hint" data-tip="${col.desc}">ⓘ</span>` : '';
+  th.innerHTML = col.label + hint + (col.sortable ? '<span class="arrow">⇅</span>' : '');
+  if(col.sortable){
+    th.addEventListener('click', ()=>{
+      if(clsSortKey===col.key){ clsSortDir = clsSortDir==='asc'?'desc':'asc'; } else { clsSortKey=col.key; clsSortDir='asc'; }
+      document.querySelectorAll('#clsHeadRow th').forEach(t=>{t.classList.remove('active'); const a=t.querySelector('.arrow'); if(a) a.textContent='⇅';});
+      th.classList.add('active'); th.querySelector('.arrow').textContent = clsSortDir==='asc'?'▲':'▼';
+      renderCls();
+    });
+  }
+  clsHeadRow.appendChild(th);
+});
+
+let clsSortKey = 'classNo', clsSortDir = 'asc';
+let clsPage = 1;
+
+const FCls = {
+  className: document.getElementById('filterClsClassName'),
+  classNo: document.getElementById('filterClsClassNo'),
+  teacherName: document.getElementById('filterClsTeacherName'),
+  province: document.getElementById('filterClsProvince'),
+  city: document.getElementById('filterClsCity'),
+  listenRateMin: document.getElementById('filterClsListenRateMin'),
+  listenRateMax: document.getElementById('filterClsListenRateMax'),
+  completeRateMin: document.getElementById('filterClsCompleteRateMin'),
+  completeRateMax: document.getElementById('filterClsCompleteRateMax'),
+  homeworkRateMin: document.getElementById('filterClsHomeworkRateMin'),
+  homeworkRateMax: document.getElementById('filterClsHomeworkRateMax'),
+};
+
+fillSelect(FCls.province, Array.from(new Set(locations.map(l=>l[0]))).sort((a,b)=>a.localeCompare(b,'zh')));
+fillSelect(FCls.city, Array.from(new Set(locations.map(l=>l[1]))).sort((a,b)=>a.localeCompare(b,'zh')));
+
+document.getElementById('clsQueryBtn').addEventListener('click', ()=>{ clsPage=1; renderCls(); });
+Object.values(FCls).forEach(el=>{
+  el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('clsQueryBtn').click(); });
+});
+
+document.getElementById('clsResetBtn').addEventListener('click', ()=>{
+  Object.values(FCls).forEach(el=>{ el.value=''; });
+  clsPage=1; renderCls();
+});
+
+function getFilteredCls(){
+  const vClassName = FCls.className.value.trim().toLowerCase();
+  const vClassNo = FCls.classNo.value.trim();
+  const vTeacherName = FCls.teacherName.value.trim().toLowerCase();
+  const vProvince = FCls.province.value, vCity = FCls.city.value;
+  const vListenMin = numOrNull(FCls.listenRateMin), vListenMax = numOrNull(FCls.listenRateMax);
+  const vCompleteMin = numOrNull(FCls.completeRateMin), vCompleteMax = numOrNull(FCls.completeRateMax);
+  const vHomeworkMin = numOrNull(FCls.homeworkRateMin), vHomeworkMax = numOrNull(FCls.homeworkRateMax);
+
+  return CLASS_DATA.filter(r=>{
+    if(vClassName && !r.className.toLowerCase().includes(vClassName)) return false;
+    if(vClassNo && !String(r.classNo).includes(vClassNo)) return false;
+    if(vTeacherName && !r.teacherName.toLowerCase().includes(vTeacherName)) return false;
+    if(vProvince && r.teacherProvince!==vProvince) return false;
+    if(vCity && r.teacherCity!==vCity) return false;
+    if(vListenMin!==null && parseFloat(r.avgListenRate)<vListenMin) return false;
+    if(vListenMax!==null && parseFloat(r.avgListenRate)>vListenMax) return false;
+    if(vCompleteMin!==null && parseFloat(r.avgCompleteRate)<vCompleteMin) return false;
+    if(vCompleteMax!==null && parseFloat(r.avgCompleteRate)>vCompleteMax) return false;
+    if(vHomeworkMin!==null && parseFloat(r.avgHomeworkRate)<vHomeworkMin) return false;
+    if(vHomeworkMax!==null && parseFloat(r.avgHomeworkRate)>vHomeworkMax) return false;
+    return true;
+  });
+}
+
+function sortRowsCls(rows){
+  const col = CLASS_COLS.find(c=>c.key===clsSortKey);
+  const dir = clsSortDir==='asc'?1:-1;
+  return rows.slice().sort((a,b)=>{
+    let av=a[clsSortKey], bv=b[clsSortKey];
+    if(col.type==='num'){ av=parseFloat(av)||0; bv=parseFloat(bv)||0; return (av-bv)*dir; }
+    return String(av).localeCompare(String(bv),'zh')*dir;
+  });
+}
+
+const elsCls = {
+  pageSize: document.getElementById('clsPageSize'),
+  body: document.getElementById('clsTableBody'),
+  rangeStart: document.getElementById('clsRangeStart'),
+  rangeEnd: document.getElementById('clsRangeEnd'),
+  filteredTotal: document.getElementById('clsFilteredTotal'),
+  pageIndicator: document.getElementById('clsPageIndicator'),
+};
+
+function renderCls(){
+  const filtered = sortRowsCls(getFilteredCls());
+  const size = parseInt(elsCls.pageSize.value,10);
+  const totalPages = Math.max(1, Math.ceil(filtered.length/size));
+  if(clsPage>totalPages) clsPage = totalPages;
+  const startIdx = (clsPage-1)*size;
+  const pageRows = filtered.slice(startIdx, startIdx+size);
+
+  if(pageRows.length===0){
+    elsCls.body.innerHTML = `<tr class="empty-row"><td colspan="${CLASS_COLS.length}">没有匹配的数据，试试调整筛选条件</td></tr>`;
+  } else {
+    elsCls.body.innerHTML = pageRows.map(r=>{
+      return '<tr>' + CLASS_COLS.map(col=>{
+        let val;
+        if(col.key==='studentCount'){
+          val = `<span class="name-link class-count-link" data-classid="${r.classId}">${r.studentCount}</span>`;
+        } else if(col.key==='teacherName'){
+          val = `<span class="name-link teacher-link" data-teacherid="${r.teacherId}" data-teachername="${r.teacherName}">${r.teacherName}</span>`;
+        } else {
+          val = r[col.key];
+        }
+        const cls = [col.sticky===1?'col-s1':col.sticky===2?'col-s2':'', col.strong?'strong':'', col.cls||''].filter(Boolean).join(' ');
+        return `<td class="${cls}">${val}</td>`;
+      }).join('') + '</tr>';
+    }).join('');
+  }
+
+  document.getElementById('clsTotalCount').textContent = CLASS_DATA.length.toLocaleString();
+  elsCls.filteredTotal.textContent = filtered.length.toLocaleString();
+  elsCls.rangeStart.textContent = filtered.length? (startIdx+1).toLocaleString() : 0;
+  elsCls.rangeEnd.textContent = Math.min(startIdx+size, filtered.length).toLocaleString();
+  elsCls.pageIndicator.textContent = `${clsPage} / ${totalPages}`;
+  document.getElementById('clsFirstPage').disabled = clsPage<=1;
+  document.getElementById('clsPrevPage').disabled = clsPage<=1;
+  document.getElementById('clsNextPage').disabled = clsPage>=totalPages;
+  document.getElementById('clsLastPage').disabled = clsPage>=totalPages;
+}
+
+elsCls.pageSize.addEventListener('change', ()=>{ clsPage=1; renderCls(); });
+document.getElementById('clsFirstPage').addEventListener('click', ()=>{ clsPage=1; renderCls(); });
+document.getElementById('clsPrevPage').addEventListener('click', ()=>{ clsPage=Math.max(1,clsPage-1); renderCls(); });
+document.getElementById('clsNextPage').addEventListener('click', ()=>{ clsPage=clsPage+1; renderCls(); });
+document.getElementById('clsLastPage').addEventListener('click', ()=>{
+  const filtered = getFilteredCls(); clsPage = Math.max(1, Math.ceil(filtered.length/parseInt(elsCls.pageSize.value,10))); renderCls();
+});
+
+document.getElementById('clsExportBtn').addEventListener('click', ()=>{
+  const rows = sortRowsCls(getFilteredCls());
+  const header = CLASS_COLS.map(c=>c.label).join(',');
+  const body = rows.map(r=> CLASS_COLS.map(c=>{
+    const v = String(r[c.key]).replace(/"/g,'""');
+    return /[,"\n]/.test(v) ? `"${v}"` : v;
+  }).join(',')).join('\n');
+  const blob = new Blob(['﻿'+header+'\n'+body], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `经典一刻班级数据_${rows.length}条.csv`;
+  a.click();
+});
+
+/* ---------------- 班级人数 -> 学员数据统计（按班级ID筛选） ---------------- */
+elsCls.body.addEventListener('click', (e)=>{
+  const countLink = e.target.closest('.class-count-link');
+  if(countLink){
+    goToStudentsByClassId(parseInt(countLink.dataset.classid,10));
+    return;
+  }
+  const teacherLink = e.target.closest('.teacher-link');
+  if(teacherLink){
+    openNameModal('班主任人员档案', `<b>${teacherLink.dataset.teachername}</b>（班主任ID ${teacherLink.dataset.teacherid}）`);
+  }
+});
+
+renderCls();
 </script>
 </body>
 </html>
